@@ -1,0 +1,54 @@
+#!/bin/bash
+# PXVIRT first-boot network setup
+# Auto-detect first physical NIC and configure vmbr0 bridge
+# Env vars: PXVIRT_IP (dhcp or IP/MASK,GATEWAY)
+set -e
+
+IP_ADDRESS="${PXVIRT_IP:-dhcp}"
+
+# Find first physical ethernet interface
+NIC=$(ip -o link show | awk -F': ' '{print $2}' | grep -v lo | grep -v vmbr | grep -v docker | grep -v br- | head -1)
+if [[ -z "$NIC" ]]; then
+    echo "ERROR: No physical NIC found"
+    exit 1
+fi
+echo "Detected NIC: $NIC"
+
+# Generate /etc/network/interfaces
+if [[ "$IP_ADDRESS" == "dhcp" ]]; then
+    # DHCP: configure physical NIC directly (vmbr0 does not support DHCP)
+    # User can set up vmbr0 bridge later via PVE web UI
+    cat > /etc/network/interfaces <<IFACE
+auto lo
+iface lo inet loopback
+
+auto ${NIC}
+iface ${NIC} inet dhcp
+IFACE
+else
+    # Static IP: standard PVE vmbr0 bridge
+    IP_CIDR="${IP_ADDRESS%%,*}"
+    GATEWAY="${IP_ADDRESS##*,}"
+    cat > /etc/network/interfaces <<IFACE
+auto lo
+iface lo inet loopback
+
+iface ${NIC} inet manual
+
+auto vmbr0
+iface vmbr0 inet static
+    address ${IP_CIDR}
+    gateway ${GATEWAY}
+    bridge-ports ${NIC}
+    bridge-stp off
+    bridge-fd 0
+IFACE
+fi
+
+# Restart networking
+ifreload -a 2>/dev/null || systemctl restart networking
+
+# Disable this service after first run
+systemctl disable pxvirt-network-setup.service
+rm -f /etc/default/pxvirt-network
+echo "Network setup completed: vmbr0 bridged to ${NIC}"

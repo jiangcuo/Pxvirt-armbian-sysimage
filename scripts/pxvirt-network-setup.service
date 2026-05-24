@@ -1,0 +1,14 @@
+[Unit]
+Description=Pxvirt first-boot network setup
+Before=networking.service
+After=systemd-udevd.service
+ConditionPathExists=/usr/local/bin/pxvirt-network-setup
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/pxvirt-network
+ExecStart=/usr/local/bin/pxvirt-network-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

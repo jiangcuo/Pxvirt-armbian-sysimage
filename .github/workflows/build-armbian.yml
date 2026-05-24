@@ -1,0 +1,96 @@
+name: PXVIRT Armbian
+
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: "Armbian board name (e.g. rock-5b, odroidn2)"
+        type: string
+        required: true
+        default: "rock-5b"
+      branch:
+        description: "Kernel branch"
+        type: choice
+        required: true
+        default: "current"
+        options:
+          - vendor
+          - current
+          - edge
+      release:
+        description: "Debian release (PBS requires trixie)"
+        type: choice
+        required: true
+        default: "bookworm"
+        options:
+          - bookworm
+          - trixie
+      product:
+        description: "Product type"
+        type: choice
+        required: true
+        default: "pxvirt"
+        options:
+          - pxvirt
+          - pbs
+      hostname:
+        description: "Hostname"
+        type: string
+        required: true
+        default: "pxvirt"
+      ip_address:
+        description: "IP address (dhcp or IP/MASK,GATEWAY e.g. 192.168.1.100/24,192.168.1.1)"
+        type: string
+        required: true
+        default: "dhcp"
+      root_password:
+        description: "Root password (empty=passwordless)"
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache /usr/local/share/boost
+          sudo apt-get clean
+
+      - name: Clone Armbian
+        run: git clone --depth=1 https://github.com/armbian/build.git armbian-build
+
+      - name: Prepare userpatches
+        run: bash .github/scripts/prepare-userpatches.sh armbian-build
+
+      - name: Build
+        env:
+          PXVIRT_PRODUCT: ${{ inputs.product }}
+          PXVIRT_CODENAME: ${{ inputs.release }}
+          PXVIRT_HOSTNAME: ${{ inputs.hostname }}
+          PXVIRT_IP: ${{ inputs.ip_address }}
+          PXVIRT_ROOT_PASSWORD: ${{ inputs.root_password }}
+        run: |
+          cd armbian-build
+          sudo -E ./compile.sh \
+            BOARD=${{ inputs.board }} \
+            BRANCH=${{ inputs.branch }} \
+            RELEASE=${{ inputs.release }} \
+            BUILD_MINIMAL=yes \
+            BUILD_DESKTOP=no \
+            KERNEL_CONFIGURE=no \
+            SHARE_LOG=yes
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pxvirt-${{ inputs.board }}-${{ inputs.branch }}
+          path: armbian-build/output/images/*.img*
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
