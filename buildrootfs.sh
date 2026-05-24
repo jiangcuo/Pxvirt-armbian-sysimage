@@ -74,7 +74,7 @@ install_pve() {
 
     local base_pkgs="postfix chrony locales locales-all ifupdown2 isc-dhcp-client \
         openssh-server ethtool dnsutils gdisk bash-completion \
-        dosfstools lvm2 btrfs-progs zfsutils-linux zfs-zed spl zfs-initramfs \
+        dosfstools lvm2 btrfs-progs zfsutils-linux zfs-zed zfs-initramfs \
         pci.ids pciutils efibootmgr net-tools traceroute \
         squashfs-tools rsyslog ksmtuned sosreport dmeventd \
         fonts-liberation gettext-base curl wget vim"
