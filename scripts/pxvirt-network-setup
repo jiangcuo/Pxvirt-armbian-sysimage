@@ -6,10 +6,34 @@ set -e
 
 IP_ADDRESS="${PXVIRT_IP:-dhcp}"
 
-# Find first physical ethernet interface
-NIC=$(ip -o link show | awk -F': ' '{print $2}' | grep -v lo | grep -v vmbr | grep -v docker | grep -v br- | head -1)
+# Check if interface is wireless
+is_wireless() {
+    [[ -d "/sys/class/net/${1}/wireless" ]] ||
+        [[ -e /proc/net/wireless && $(awk -v iface="${1}:" '$1 == iface {print $1}' /proc/net/wireless) ]]
+}
+
+# Check if interface is a bridge or bridge member
+is_bridge_or_member() {
+    ip -d link show "${1}" 2>/dev/null | grep -Eq "bridge|brport"
+}
+
+# Find first physical wired ethernet interface
+NIC=""
+for iface in $(ip -o link show | awk -F': ' '{print $2}' | grep -v lo); do
+    # Skip virtual/bridge/wireless interfaces
+    is_wireless "$iface" && continue
+    is_bridge_or_member "$iface" && continue
+    [[ "$iface" == vmbr* ]] && continue
+    [[ "$iface" == docker* ]] && continue
+    [[ "$iface" == br-* ]] && continue
+    [[ "$iface" == veth* ]] && continue
+    [[ "$iface" == wl* ]] && continue
+    NIC="$iface"
+    break
+done
+
 if [[ -z "$NIC" ]]; then
-    echo "ERROR: No physical NIC found"
+    echo "ERROR: No physical wired NIC found"
     exit 1
 fi
 echo "Detected NIC: $NIC"
@@ -45,8 +69,8 @@ iface vmbr0 inet static
 IFACE
 fi
 
-# Restart networking
-ifreload -a 2>/dev/null || systemctl restart networking
+# Restart networking (with timeout to avoid hanging)
+timeout 10 ifreload -a 2>/dev/null || timeout 15 systemctl restart networking 2>/dev/null || true
 
 # Disable this service after first run
 systemctl disable pxvirt-network-setup.service

@@ -6,6 +6,7 @@ ConditionPathExists=/usr/local/bin/pxvirt-network-setup
 
 [Service]
 Type=oneshot
+TimeoutStartSec=30
 EnvironmentFile=-/etc/default/pxvirt-network
 ExecStart=/usr/local/bin/pxvirt-network-setup
 RemainAfterExit=yes

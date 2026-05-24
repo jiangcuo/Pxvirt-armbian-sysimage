@@ -40,7 +40,7 @@ setup_apt_sources() {
         || die "Failed to download apt key"
 
     # Add pxvirt source
-    cat > /etc/apt/sources.list.d/pxvirt.list <<EOF
+    cat > /etc/apt/sources.list.d/pxvirt-sources.list <<EOF
 deb ${PXVIRT_MIRROR}/${PRODUCT} ${CODENAME} main
 EOF
 
@@ -50,13 +50,13 @@ EOF
             reef|squid|quincy)
                 info "Adding Ceph $CEPH_RELEASE source"
                 echo "deb ${PXVIRT_MIRROR}/${PRODUCT} ${CODENAME} ceph-${CEPH_RELEASE}" \
-                    >> /etc/apt/sources.list.d/pxvirt.list
+                    >> /etc/apt/sources.list.d/pxvirt-sources.list
                 ;;
             *) warn "Unknown Ceph release: $CEPH_RELEASE, skipping" ;;
         esac
     fi
 
-    apt-get update || die "apt update failed"
+    apt update || die "apt update failed"
 }
 
 ###############################################################################
@@ -79,13 +79,13 @@ install_pve() {
         squashfs-tools rsyslog ksmtuned sosreport dmeventd \
         fonts-liberation gettext-base curl wget vim"
 
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    DEBIAN_FRONTEND=noninteractive apt install -y \
         $main_pkg $base_pkgs \
         || die "Failed to install $main_pkg"
 
     # Ceph packages
     if [[ -n "$CEPH_RELEASE" ]]; then
-        DEBIAN_FRONTEND=noninteractive apt-get install -y ceph-common ceph-fuse 2>/dev/null || true
+        DEBIAN_FRONTEND=noninteractive apt install -y ceph-common ceph-fuse 2>/dev/null || true
     fi
 
     info "Proxmox packages installed"
@@ -191,7 +191,7 @@ de_armbian() {
 
 
     # Remove conflicting network stacks (PVE uses ifupdown2)
-    DEBIAN_FRONTEND=noninteractive apt-get purge -y \
+    DEBIAN_FRONTEND=noninteractive apt purge -y \
         network-manager network-manager-gnome nmcli \
         netplan.io netplan-generator \
         systemd-networkd \
@@ -204,8 +204,8 @@ de_armbian() {
 ###############################################################################
 cleanup() {
     info "Cleaning up cache"
-    apt-get autoremove -y --purge 2>/dev/null || true
-    apt-get clean
+    apt autoremove -y --purge 2>/dev/null || true
+    apt clean
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
 }
 
