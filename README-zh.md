@@ -41,7 +41,7 @@ pxvirt-armbian/
 | `release` | Debian 版本 | `bookworm` / `trixie` |
 | `product` | 产品类型 | `pxvirt` / `pbs` |
 | `hostname` | 主机名 | `pxvirt` |
-| `ip_address` | IP 地址（dhcp 或 IP/掩码,网关） | `dhcp` 或 `192.168.1.100/24,192.168.1.1` |
+| `ip_address` | 静态 IP（IP/掩码,网关） | `192.168.1.100/24,192.168.1.1` |
 | `root_password` | root 密码（留空=无密码） | `` |
 
 > 完整板子列表见 [docs/armbian-boards.md](docs/armbian-boards.md)
@@ -57,17 +57,16 @@ pxvirt-armbian/
 | `release` | Debian 版本 | `bookworm` / `trixie` |
 | `product` | 产品类型 | `pxvirt` / `pbs` |
 | `hostname` | 主机名 | `pxvirt` |
-| `ip_address` | IP 地址（dhcp 或 IP/掩码,网关） | `dhcp` |
+| `ip_address` | 静态 IP（IP/掩码,网关） | `192.168.1.100/24,192.168.1.1` |
 | `root_password` | root 密码 | `` |
 
 > 完整设备列表见 [docs/ophub-boards.md](docs/ophub-boards.md)
 
 ## 网络配置
 
-- **DHCP**：直接配置物理网口。用户后续可通过 PVE Web UI 手动配置 vmbr0 网桥。
-- **静态 IP**：自动创建标准 PVE vmbr0 网桥，桥接到自动检测的物理网口。
+必须提供静态 IP（不支持 DHCP，PVE 需要在 `/etc/hosts` 中写入实际 IP）。
 
-网络由 `pxvirt-network-setup.service` 在首次启动时配置（运行一次后自动删除）。
+首次启动时 `pxvirt-network-setup.service` 自动检测物理有线网口，创建标准 PVE vmbr0 网桥（运行一次后自动删除）。
 
 ## 说明
 

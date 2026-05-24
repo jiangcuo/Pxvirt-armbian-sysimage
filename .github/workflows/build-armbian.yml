@@ -39,10 +39,9 @@ on:
         required: true
         default: "pxvirt"
       ip_address:
-        description: "IP address (dhcp or IP/MASK,GATEWAY e.g. 192.168.1.100/24,192.168.1.1)"
+        description: "Static IP (IP/MASK,GATEWAY e.g. 192.168.1.100/24,192.168.1.1)"
         type: string
         required: true
-        default: "dhcp"
       root_password:
         description: "Root password (empty=passwordless)"
         type: string
@@ -84,13 +83,14 @@ jobs:
             RELEASE=${{ inputs.release }} \
             BUILD_MINIMAL=yes \
             BUILD_DESKTOP=no \
+            VENDOR=Pxvirt \
             KERNEL_CONFIGURE=no \
             SHARE_LOG=yes
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pxvirt-${{ inputs.board }}-${{ inputs.branch }}
-          path: armbian-build/output/images/*.img*
+          name: pxvirt-${{ inputs.board }}-${{ inputs.release }}-${{ inputs.branch }}
+          path: armbian-build/output/images/*
           retention-days: 14
           if-no-files-found: error
           compression-level: 0

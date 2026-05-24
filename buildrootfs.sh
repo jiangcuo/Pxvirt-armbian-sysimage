@@ -13,13 +13,18 @@ PXVIRT_MIRROR="https://mirrors.lierfang.com/pxcloud"
 PRODUCT="${PXVIRT_PRODUCT:-pxvirt}"          # pxvirt | pbs
 CODENAME="${PXVIRT_CODENAME:-bookworm}"      # bookworm | trixie
 HOSTNAME_SET="${PXVIRT_HOSTNAME:-pxvirt}"
-IP_ADDRESS="${PXVIRT_IP:-dhcp}"
+IP_ADDRESS="${PXVIRT_IP:-}"              # IP/MASK,GATEWAY e.g. 192.168.1.100/24,192.168.1.1
 ROOT_PASSWORD="${PXVIRT_ROOT_PASSWORD:-}"
 CEPH_RELEASE="${PXVIRT_CEPH:-squid}"          # reef | squid | quincy | empty=skip
 
 # PBS only supports trixie
 if [[ "$PRODUCT" == "pbs" && "$CODENAME" != "trixie" ]]; then
     CODENAME="trixie"
+fi
+
+# Static IP is required (PVE needs IP in /etc/hosts)
+if [[ -z "$IP_ADDRESS" || ! "$IP_ADDRESS" == *,* ]]; then
+    die "PXVIRT_IP is required, format: IP/MASK,GATEWAY (e.g. 192.168.1.100/24,192.168.1.1)"
 fi
 
 ###############################################################################
@@ -130,16 +135,18 @@ configure_system() {
 
     # Hostname
     echo "$HOSTNAME_SET" > /etc/hostname
+    local ip_only="${IP_ADDRESS%%/*}"   # extract IP without /MASK,GW
+    ip_only="${ip_only%%,*}"             # safety strip
     cat > /etc/hosts <<EOF
 127.0.0.1   localhost
-127.0.1.1   ${HOSTNAME_SET}
+${ip_only}   ${HOSTNAME_SET}.local ${HOSTNAME_SET}
 
 # IPv6
 ::1         localhost ip6-localhost ip6-loopback
 ff02::1     ip6-allnodes
 ff02::2     ip6-allrouters
 EOF
-    info "Hostname: $HOSTNAME_SET"
+    info "Hostname: $HOSTNAME_SET, IP: $ip_only"
 
     # Network: firstboot service auto-detects NIC and creates vmbr0 bridge
     setup_network_firstboot
@@ -190,6 +197,10 @@ de_armbian() {
           /etc/profile.d/check_first_login*.sh
     rm -f /root/.not_logged_in_yet
     chage -d 99999 root 2>/dev/null || true
+
+    # Disable Armbian automatic login
+    rm -rf /etc/systemd/system/getty@.service.d/override.conf
+    rm -rf /etc/systemd/system/serial-getty@.service.d/override.conf
 
 
     # Remove conflicting network stacks (PVE uses ifupdown2)

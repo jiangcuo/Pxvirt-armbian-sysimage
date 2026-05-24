@@ -1,10 +1,19 @@
 #!/bin/bash
 # PXVIRT first-boot network setup
 # Auto-detect first physical NIC and configure vmbr0 bridge
-# Env vars: PXVIRT_IP (dhcp or IP/MASK,GATEWAY)
+# Env vars: PXVIRT_IP (IP/MASK,GATEWAY e.g. 192.168.1.100/24,192.168.1.1)
 set -e
 
-IP_ADDRESS="${PXVIRT_IP:-dhcp}"
+# Regenerate SSH host keys (removed during build for security)
+ssh-keygen -A || true
+systemctl restart sshd 2>/dev/null || true
+echo "SSH host keys regenerated"
+
+IP_ADDRESS="${PXVIRT_IP:-}"
+if [[ -z "$IP_ADDRESS" || ! "$IP_ADDRESS" == *,* ]]; then
+    echo "ERROR: PXVIRT_IP is required, format: IP/MASK,GATEWAY"
+    exit 1
+fi
 
 # Check if interface is wireless
 is_wireless() {
@@ -38,22 +47,13 @@ if [[ -z "$NIC" ]]; then
 fi
 echo "Detected NIC: $NIC"
 
-# Generate /etc/network/interfaces
-if [[ "$IP_ADDRESS" == "dhcp" ]]; then
-    # DHCP: configure physical NIC directly (vmbr0 does not support DHCP)
-    # User can set up vmbr0 bridge later via PVE web UI
-    cat > /etc/network/interfaces <<IFACE
-auto lo
-iface lo inet loopback
+# Parse static IP config: IP/MASK,GATEWAY
+IP_CIDR="${IP_ADDRESS%%,*}"
+GATEWAY="${IP_ADDRESS##*,}"
+echo "Static IP: $IP_CIDR, Gateway: $GATEWAY"
 
-auto ${NIC}
-iface ${NIC} inet dhcp
-IFACE
-else
-    # Static IP: standard PVE vmbr0 bridge
-    IP_CIDR="${IP_ADDRESS%%,*}"
-    GATEWAY="${IP_ADDRESS##*,}"
-    cat > /etc/network/interfaces <<IFACE
+# Generate /etc/network/interfaces with vmbr0 bridge
+cat > /etc/network/interfaces <<IFACE
 auto lo
 iface lo inet loopback
 
@@ -67,7 +67,7 @@ iface vmbr0 inet static
     bridge-stp off
     bridge-fd 0
 IFACE
-fi
+
 
 # Restart networking (with timeout to avoid hanging)
 timeout 10 ifreload -a 2>/dev/null || timeout 15 systemctl restart networking 2>/dev/null || true

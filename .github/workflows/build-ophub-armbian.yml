@@ -42,10 +42,9 @@ on:
         required: true
         default: "pxvirt"
       ip_address:
-        description: "IP address (dhcp or IP/MASK,GATEWAY)"
+        description: "Static IP (IP/MASK,GATEWAY e.g. 192.168.1.100/24,192.168.1.1)"
         type: string
         required: true
-        default: "dhcp"
       root_password:
         description: "Root password (empty=passwordless)"
         type: string
@@ -142,10 +141,19 @@ jobs:
           kernel_usage: stable
           armbian_size: 6000
 
+      - name: Rename images
+        run: |
+          cd ${{ env.PACKAGED_OUTPUTPATH }}
+          for f in *.img.gz; do
+            board=$(echo "$f" | sed -n 's/.*_\(s[0-9a-z]*\)_.*/\1/p')
+            kernel=$(echo "$f" | sed -n 's/.*_k\([0-9.]*\)_.*/\1/p')
+            mv "$f" "pxvirt-${board:-box}-${{ inputs.release }}-k${kernel:-unknown}.img.gz" 2>/dev/null || true
+          done
+
       - uses: actions/upload-artifact@v4
         with:
-          name: pxvirt-tvbox-${{ inputs.amlogic_soc }}
-          path: ${{ env.PACKAGED_OUTPUTPATH }}/*
+          name: pxvirt-box-${{ inputs.amlogic_soc }}-${{ inputs.release }}
+          path: ${{ env.PACKAGED_OUTPUTPATH }}/*.img.gz
           retention-days: 14
           compression-level: 0
 

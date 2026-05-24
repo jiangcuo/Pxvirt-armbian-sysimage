@@ -41,7 +41,7 @@ Trigger workflows manually via `workflow_dispatch`.
 | `release` | Debian release | `bookworm` / `trixie` |
 | `product` | Product type | `pxvirt` / `pbs` |
 | `hostname` | Hostname | `pxvirt` |
-| `ip_address` | IP (dhcp or IP/MASK,GATEWAY) | `dhcp` or `192.168.1.100/24,192.168.1.1` |
+| `ip_address` | Static IP (IP/MASK,GATEWAY) | `192.168.1.100/24,192.168.1.1` |
 | `root_password` | Root password (empty=passwordless) | `` |
 
 > Full board list: [docs/armbian-boards.md](docs/armbian-boards.md)
@@ -57,17 +57,16 @@ Builds an Armbian base image, then repackages it with [ophub/amlogic-s9xxx-armbi
 | `release` | Debian release | `bookworm` / `trixie` |
 | `product` | Product type | `pxvirt` / `pbs` |
 | `hostname` | Hostname | `pxvirt` |
-| `ip_address` | IP (dhcp or IP/MASK,GATEWAY) | `dhcp` |
+| `ip_address` | Static IP (IP/MASK,GATEWAY) | `192.168.1.100/24,192.168.1.1` |
 | `root_password` | Root password | `` |
 
 > Full device list: [docs/ophub-boards.md](docs/ophub-boards.md)
 
 ## Network Configuration
 
-- **DHCP**: Physical NIC is configured directly. User can set up vmbr0 bridge later via PVE web UI.
-- **Static IP**: Standard PVE vmbr0 bridge is created automatically, bridged to the auto-detected physical NIC.
+Static IP is required (DHCP not supported, PVE needs actual IP in `/etc/hosts`).
 
-Network is configured on first boot by `pxvirt-network-setup.service` (runs once, then self-deletes).
+On first boot, `pxvirt-network-setup.service` auto-detects the physical wired NIC and creates a standard PVE vmbr0 bridge (runs once, then self-deletes).
 
 ## Notes
 
