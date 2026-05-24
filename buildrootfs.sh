@@ -79,7 +79,9 @@ install_pve() {
         squashfs-tools rsyslog ksmtuned sosreport dmeventd \
         fonts-liberation gettext-base curl wget vim"
 
-    DEBIAN_FRONTEND=noninteractive apt install -y \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        -o Dpkg::Options::="--force-confdef" \
+        -o Dpkg::Options::="--force-confold" \
         $main_pkg $base_pkgs \
         || die "Failed to install $main_pkg"
 
